@@ -37,6 +37,9 @@ const valueInRangePropType = (props, propName, componentName) => {
   }
 };
 
+const getOffsetProperty = (axis) => axis === 'y' ? 'left' : 'top';
+const getClientOffsetProperty = (axis) => axis === 'y' ? 'clientY' : 'clientX';
+
 const getStyles = (props, context, state) => {
   const {slider} = context.muiTheme;
   const fillGutter = slider.handleSize / 2;
@@ -48,7 +51,8 @@ const getStyles = (props, context, state) => {
       touchCallout: 'none',
       userSelect: 'none',
       cursor: 'default',
-      height: slider.handleSizeActive,
+      height: props.axis === 'y' ? undefined : slider.handleSizeActive,
+      width: props.axis === 'y' ? slider.handleSizeActive : undefined,
       position: 'relative',
       marginTop: 24,
       marginBottom: 48,
@@ -57,8 +61,8 @@ const getStyles = (props, context, state) => {
       position: 'absolute',
       top: (slider.handleSizeActive - slider.trackSize) / 2,
       left: 0,
-      width: '100%',
-      height: slider.trackSize,
+      width: props.axis === 'y' ? slider.trackSize : '100%',
+      height: props.axis === 'y' ? '100%' : slider.trackSize,
     },
     filledAndRemaining: {
       position: 'absolute',
@@ -71,7 +75,7 @@ const getStyles = (props, context, state) => {
       position: 'absolute',
       cursor: 'pointer',
       pointerEvents: 'inherit',
-      top: 0,
+      [props.axis === 'y' ? 'left' : 'top']: 0,
       left: state.percent === 0 ? '0%' : `${(state.percent * 100)}%`,
       zIndex: 1,
       margin: `${(slider.trackSize / 2)}px 0 0 0`,
@@ -138,14 +142,14 @@ const getStyles = (props, context, state) => {
     left: 0,
     backgroundColor: (props.disabled) ? slider.trackColor : slider.selectionColor,
     marginRight: fillGutter,
-    width: `calc(${(state.percent * 100)}%${calcDisabledSpacing})`,
+    [props.axis === 'y' ? 'height' : 'width']: `calc(${(state.percent * 100)}%${calcDisabledSpacing})`,
   });
   styles.remaining = Object.assign({}, styles.filledAndRemaining, {
     right: 0,
     backgroundColor: (state.hovered || state.focused) &&
       !props.disabled ? slider.trackColorSelected : slider.trackColor,
     marginLeft: fillGutter,
-    width: `calc(${((1 - state.percent) * 100)}%${calcDisabledSpacing})`,
+    [props.axis === 'y' ? 'height' : 'width']: `calc(${((1 - state.percent) * 100)}%${calcDisabledSpacing})`,
   });
 
   return styles;
@@ -153,6 +157,10 @@ const getStyles = (props, context, state) => {
 
 class Slider extends Component {
   static propTypes = {
+    /**
+     * The axis on which the slider will slide.
+     */
+    axis: PropTypes.oneOf(['x', 'y']),
     /**
      * The default value of the slider.
      */
@@ -223,6 +231,7 @@ class Slider extends Component {
   };
 
   static defaultProps = {
+    axis: 'x',
     disabled: false,
     disableFocusRipple: false,
     max: 1,
@@ -362,7 +371,7 @@ class Slider extends Component {
     }
     this.dragRunning = true;
     requestAnimationFrame(() => {
-      this.onDragUpdate(event, event.clientX - this.getTrackLeft());
+      this.onDragUpdate(event, event[getClientOffsetProperty(this.props.axis)] - this.getTrackOffset());
       this.dragRunning = false;
     });
   };
@@ -373,7 +382,7 @@ class Slider extends Component {
     }
     this.dragRunning = true;
     requestAnimationFrame(() => {
-      this.onDragUpdate(event, event.touches[0].clientX - this.getTrackLeft());
+      this.onDragUpdate(event, event.touches[0][getClientOffsetProperty(this.props.axis)] - this.getTrackOffset());
       this.dragRunning = false;
     });
   };
@@ -438,8 +447,8 @@ class Slider extends Component {
 
   handleTouchStart = (event) => {
     if (!this.props.disabled && !this.state.dragging) {
-      const pos = event.touches[0].clientX - this.getTrackLeft();
-      this.dragX(event, pos);
+      const pos = event.touches[0][getClientOffsetProperty(this.props.axis)] - this.getTrackOffset();
+      this.dragTo(event, pos);
 
       // Since the touch event fired for the track and handle is child of
       // track, we need to manually propagate the event to the handle.
@@ -459,8 +468,8 @@ class Slider extends Component {
 
   handleMouseDown = (event) => {
     if (!this.props.disabled && !this.state.dragging) {
-      const pos = event.clientX - this.getTrackLeft();
-      this.dragX(event, pos);
+      const pos = event[getClientOffsetProperty(this.props.axis)] - this.getTrackOffset();
+      this.dragTo(event, pos);
 
       // Since the click event fired for the track and handle is child of
       // track, we need to manually propagate the event to the handle.
@@ -480,8 +489,8 @@ class Slider extends Component {
     this.setState({hovered: false});
   };
 
-  getTrackLeft() {
-    return this.refs.track.getBoundingClientRect().left;
+  getTrackOffset() {
+    return this.refs.track.getBoundingClientRect()[getOffsetProperty(this.props.axis)];
   }
 
   onDragStart(event) {
@@ -502,11 +511,11 @@ class Slider extends Component {
 
   onDragUpdate(event, pos) {
     if (!this.state.dragging) return;
-    if (!this.props.disabled) this.dragX(event, pos);
+    if (!this.props.disabled) this.dragTo(event, pos);
   }
 
-  dragX(event, pos) {
-    const max = this.refs.track.clientWidth;
+  dragTo(event, pos) {
+    const max = this.props.axis === 'y' ? this.refs.track.clientHeight : this.refs.track.clientWidth;
     if (pos < 0) pos = 0; else if (pos > max) pos = max;
     this.updateWithChangeEvent(event, pos / max);
   }

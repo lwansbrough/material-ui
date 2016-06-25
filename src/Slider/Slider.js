@@ -46,28 +46,34 @@ const getStyles = (props, context, state) => {
   const disabledGutter = slider.trackSize + slider.handleSizeDisabled / 2;
   const calcDisabledSpacing = props.disabled ? ` - ${disabledGutter}px` : '';
 
+  const crossAxisProperty = props.axis === 'y' ? 'width' : 'height';
+  const crossAxisOffsetProperty = props.axis === 'y' ? 'left' : 'top';
+  const mainAxisProperty = props.axis === 'y' ? 'height' : 'width';
+  const mainAxisOffsetProperty = props.axis === 'y' ? 'top' : 'left';
+  const reverseMainAxisOffsetProperty = props.axis === 'y' ? 'bottom' : 'right';
+
   const styles = {
     slider: {
       touchCallout: 'none',
       userSelect: 'none',
       cursor: 'default',
-      height: props.axis === 'y' ? undefined : slider.handleSizeActive,
-      width: props.axis === 'y' ? slider.handleSizeActive : undefined,
+      [crossAxisProperty]: slider.handleSizeActive,
+      [mainAxisProperty]: '100%',
       position: 'relative',
       marginTop: 24,
       marginBottom: 48,
     },
     track: {
       position: 'absolute',
-      top: (slider.handleSizeActive - slider.trackSize) / 2,
-      left: 0,
-      width: props.axis === 'y' ? slider.trackSize : '100%',
-      height: props.axis === 'y' ? '100%' : slider.trackSize,
+      [crossAxisOffsetProperty]: (slider.handleSizeActive - slider.trackSize) / 2,
+      [mainAxisOffsetProperty]: 0,
+      [mainAxisProperty]: '100%',
+      [crossAxisProperty]: slider.trackSize,
     },
     filledAndRemaining: {
       position: 'absolute',
-      top: 0,
-      height: '100%',
+      [crossAxisOffsetProperty]: 0,
+      [crossAxisProperty]: '100%',
       transition: transitions.easeOut(null, 'margin'),
     },
     handle: {
@@ -75,10 +81,10 @@ const getStyles = (props, context, state) => {
       position: 'absolute',
       cursor: 'pointer',
       pointerEvents: 'inherit',
-      [props.axis === 'y' ? 'left' : 'top']: 0,
-      left: state.percent === 0 ? '0%' : `${(state.percent * 100)}%`,
+      [crossAxisOffsetProperty]: 0,
+      [mainAxisOffsetProperty]: state.percent === 0 ? '0%' : `${(state.percent * 100)}%`,
       zIndex: 1,
-      margin: `${(slider.trackSize / 2)}px 0 0 0`,
+      margin: props.axis === 'y' ? `0 0 0 ${(slider.trackSize / 2)}px` : `${(slider.trackSize / 2)}px 0 0 0`,
       width: slider.handleSize,
       height: slider.handleSize,
       backgroundColor: slider.selectionColor,
@@ -139,17 +145,17 @@ const getStyles = (props, context, state) => {
     },
   };
   styles.filled = Object.assign({}, styles.filledAndRemaining, {
-    left: 0,
+    [mainAxisOffsetProperty]: 0,
     backgroundColor: (props.disabled) ? slider.trackColor : slider.selectionColor,
-    marginRight: fillGutter,
-    [props.axis === 'y' ? 'height' : 'width']: `calc(${(state.percent * 100)}%${calcDisabledSpacing})`,
+    [props.axis === 'y' ? 'marginBottom' : 'marginRight']: fillGutter,
+    [mainAxisProperty]: `calc(${(state.percent * 100)}%${calcDisabledSpacing})`,
   });
   styles.remaining = Object.assign({}, styles.filledAndRemaining, {
-    right: 0,
+    [reverseMainAxisOffsetProperty]: 0,
     backgroundColor: (state.hovered || state.focused) &&
       !props.disabled ? slider.trackColorSelected : slider.trackColor,
-    marginLeft: fillGutter,
-    [props.axis === 'y' ? 'height' : 'width']: `calc(${((1 - state.percent) * 100)}%${calcDisabledSpacing})`,
+    [props.axis === 'y' ? 'marginTop' : 'marginLeft']: fillGutter,
+    [mainAxisProperty]: `calc(${((1 - state.percent) * 100)}%${calcDisabledSpacing})`,
   });
 
   return styles;
